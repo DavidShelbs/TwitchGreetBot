@@ -28,6 +28,22 @@ class Bot(commands.Bot):
         # Start greet loop routine
         self.greet_loop.start()
     
+    async def event_message(self, message):
+        # This is a bot message
+        if message.echo:
+            return
+        
+        # Greet viewer and add them to the session
+        if message.author.name not in VIEWERS_PER_SESSION:
+            if message.tags:
+                if 'subscriber' in message.tags:
+                    if message.tags['subscriber'] == '1':
+                        bot_msg = f'The myth, the legend, {message.author.display_name} is in the chat! PogChamp'
+                    else:
+                        bot_msg = f'Hello, {message.author.display_name}! Welcome to the Channel! PogChamp'
+            await self.get_channel(os.environ['CHANNEL']).send(bot_msg)
+            VIEWERS_PER_SESSION.update([message.author.name])
+    
     @routines.routine(seconds=5.0)
     async def greet_loop(self):
         chatter_greet_list = list()
@@ -46,22 +62,26 @@ class Bot(commands.Bot):
         viewers = json.loads(request.urlopen(req).read())['chatters']['viewers']
         viewers += json.loads(request.urlopen(req).read())['chatters']['moderators']
         viewers += json.loads(request.urlopen(req).read())['chatters']['vips']
+        viewers += json.loads(request.urlopen(req).read())['chatters']['broadcaster']
         for viewer in viewers:
             if viewer not in VIEWERS_PER_SESSION and viewer != os.environ['BOT_NICK']:
-                # if self.get_channel(os.environ['CHANNEL']).get_chatter(viewer).is_subscriber:
-                #     sub_greet_list.append(viewer)
-                #     sub_viewing = True
-                # else:
-                chatter_greet_list.append(viewer)
-                chatter_viewing = True
+                if self.get_channel(os.environ['CHANNEL']).get_chatter(viewer) is not None:
+                    if self.get_channel(os.environ['CHANNEL']).get_chatter(viewer).is_subscriber:
+                        sub_greet_list.append(viewer)
+                        sub_viewing = True
+                    else:
+                        chatter_greet_list.append(viewer)
+                        chatter_viewing = True
+                else:
+                    logging.info(f'Invalid viewer: {viewer}')
                 
         if sub_viewing:
             if len(sub_greet_list) == 1:
-                bot_msg = f'The myth, the legend, {sub_greet_list[0]} is in the chat! PogChamp  '
+                bot_msg = f'The myth, the legend, {sub_greet_list[0]} is in the chat! PogChamp'
             elif len(sub_greet_list) == 2:
-                bot_msg = f'The myths, the legends, {sub_greet_list[0]} and {sub_greet_list[1]} are in the chat! PogChamp  '
+                bot_msg = f'The myths, the legends, {sub_greet_list[0]} and {sub_greet_list[1]} are in the chat! PogChamp'
             elif len(sub_greet_list) > 2:
-                bot_msg = f'The myths, the legends, {", ".join(sub_greet_list[:-1])}, and {sub_greet_list[-1]} are in the chat! PogChamp  '
+                bot_msg = f'The myths, the legends, {", ".join(sub_greet_list[:-1])}, and {sub_greet_list[-1]} are in the chat! PogChamp'
             await self.get_channel(os.environ['CHANNEL']).send(bot_msg)
 
         if chatter_viewing:
