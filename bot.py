@@ -73,6 +73,8 @@ class Bot(commands.Bot):
                         chatter_greet_list.append(viewer)
                         chatter_viewing = True
                 else:
+                    chatter_greet_list.append(viewer)
+                    chatter_viewing = True
                     logging.info(f'Invalid viewer: {viewer}')
                 
         if sub_viewing:
